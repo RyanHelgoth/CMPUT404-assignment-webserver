@@ -34,19 +34,21 @@ class MyWebServer(socketserver.BaseRequestHandler):
         print ("Got a request of: %s\n" % self.data)
 
         self.requestParts = str(self.data).split()
-        self.requestType = self.requestParts[0]
+        self.requestType = self.requestParts[0][2:] #Slicing cuts out "'b"
         self.url = self.requestParts[1]
         #Might need to get host
+        print(self.requestType)
 
         if (self.requestType == "GET"):
             #Send data based on url
-            with open("index.html", "r") as indexHTML:
+            with open("www/index.html", "r") as indexHTML:
                 self.indexHTMLString = indexHTML.read()
             
             self.fileSize = len(self.indexHTMLString)
             #TODO add date
-            self.header = "HTTP/1.0 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}".format(self.fileSize)
-            self.request.sendall(bytearray(self.indexHTMLString,'utf-8'))
+            print("test")
+            self.payload = "HTTP/1.0 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.fileSize, self.indexHTMLString)
+            self.request.sendall(bytearray(self.payload,'utf-8'))
         else:
             #Send 405 cannont handle error
             pass
