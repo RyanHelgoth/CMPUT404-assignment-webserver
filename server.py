@@ -44,3 +44,30 @@ if __name__ == "__main__":
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     server.serve_forever()
+
+    server.handle()
+
+
+
+
+'''
+Incoming GET:
+> GET / HTTP/1.1
+> Host: 0.0.0.0:8000
+> User-Agent: curl/7.61.0
+> Accept: */*
+> 
+
+Response to GET:
+< HTTP/1.0 200 OK
+< Server: SimpleHTTP/0.6 Python/3.6.7
+< Date: Thu, 20 Jan 2022 19:57:31 GMT
+< Content-type: text/html; charset=utf-8
+< Content-Length: 2125
+< 
+*BODY* (serve "/" aka "./www" files)
+
+
+
+
+'''
