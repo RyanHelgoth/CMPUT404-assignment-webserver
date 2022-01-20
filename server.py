@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -36,19 +37,44 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.requestParts = str(self.data).split()
         self.requestType = self.requestParts[0][2:] #Slicing cuts out "'b"
         self.url = self.requestParts[1]
-        #Might need to get host
-        print(self.requestType)
+    
 
         if (self.requestType == "GET"):
-            #Send data based on url
-            with open("www/index.html", "r") as indexHTML:
-                self.indexHTMLString = indexHTML.read()
+            if (self.url == "/"):
+                #Handle index requests
+                #self.file = "www{}index.html".format(self.url)
+                self.file = os.path.join("www", "index.html")
+                self.indexSize = os.path.getsize(self.file)
+                with open(self.file, "r") as indexHTML:
+                    self.indexHTMLString = indexHTML.read()
             
-            self.fileSize = len(self.indexHTMLString)
-            #TODO add date
-            print("test")
-            self.payload = "HTTP/1.0 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.fileSize, self.indexHTMLString)
-            self.request.sendall(bytearray(self.payload,'utf-8'))
+                #TODO add date
+                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.indexSize, self.indexHTMLString)
+                self.request.sendall(bytearray(self.payload,'utf-8'))
+
+            elif (self.url[-1] == "/"):
+                self.file = os.path.join(self.url, "index.html") #TODO make self.file cross platform
+                self.indexSize = os.path.getsize(self.file) 
+                
+                with open(self.file, "r") as indexHTML:
+                    self.indexHTMLString = indexHTML.read()
+            
+                #TODO add date
+                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.indexSize, self.indexHTMLString)
+                self.request.sendall(bytearray(self.payload,'utf-8'))
+
+
+            else:
+                #Handle non index requests
+                self.file = self.url #TODO make self.file cross platform
+                self.fileSize = os.path.getsize(self.file)
+                
+                with open(self.file, "r") as file:
+                    self.fileString = file.read()
+
+                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/css; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.fileSize, self.indexHTMLString)
+                self.request.sendall(bytearray(self.payload,'utf-8'))
+
         else:
             #Send 405 cannont handle error
             pass
@@ -70,7 +96,7 @@ if __name__ == "__main__":
     server.handle()
 
 
-
+# GET /pub/WWW/TheProject.html HTTP/1.1 (example GET)
 
 '''
 Incoming GET:
