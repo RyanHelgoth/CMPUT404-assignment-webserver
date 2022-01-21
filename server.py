@@ -53,7 +53,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.request.sendall(bytearray(self.payload,'utf-8'))
 
             elif (self.url[-1] == "/"):
-                self.file = os.path.join(self.url, "index.html") #TODO make self.file cross platform
+                self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
                 self.indexSize = os.path.getsize(self.file) 
                 
                 with open(self.file, "r") as indexHTML:
@@ -66,13 +66,15 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
             else:
                 #Handle non index requests
-                self.file = self.url #TODO make self.file cross platform
+                #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
+                self.file = "./www{}".format(self.url)
+                print(str(self.file))
                 self.fileSize = os.path.getsize(self.file)
                 
                 with open(self.file, "r") as file:
                     self.fileString = file.read()
 
-                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/css; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.fileSize, self.indexHTMLString)
+                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/css; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.fileSize, self.fileString)
                 self.request.sendall(bytearray(self.payload,'utf-8'))
 
         else:
