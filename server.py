@@ -51,7 +51,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #Handle non index requests
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
                 self.path = "./www{}".format(self.url)
-                print(str(self.file))
+                
                 
             try:
                 with open(self.path, "r") as file:
@@ -69,9 +69,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
 
     def __handle200(self):
-        self.fileSize = os.path.getsize(self.file) #TODO fix
+        self.fileSize = os.path.getsize(self.path) #TODO fix
         #https://stackoverflow.com/a/541408
-        self.fileExt = os.path.splitext(self.file)[1][1:]
+        self.fileExt = os.path.splitext(self.path)[1][1:]
         self.statusCode = "200 Ok"
         self.__sendData()
         return
@@ -103,7 +103,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
         return
 
     def __sendData(self):
-        self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileSize, self.fileExt, self.body)
+        self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+        #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
 
