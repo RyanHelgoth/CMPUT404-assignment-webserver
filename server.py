@@ -43,45 +43,71 @@ class MyWebServer(socketserver.BaseRequestHandler):
             if (self.url == "/"):
                 #Handle index requests
                 #self.file = "www{}index.html".format(self.url)
-                self.file = os.path.join("www", "index.html")
-                self.indexSize = os.path.getsize(self.file)
-                with open(self.file, "r") as indexHTML:
-                    self.indexHTMLString = indexHTML.read()
-            
-                #TODO add date
-                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.indexSize, self.indexHTMLString)
-                self.request.sendall(bytearray(self.payload,'utf-8'))
-
+                self.path = os.path.join("www", "index.html")
             elif (self.url[-1] == "/"):
-                self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
-                self.indexSize = os.path.getsize(self.file) 
-                
-                with open(self.file, "r") as indexHTML:
-                    self.indexHTMLString = indexHTML.read()
-            
-                #TODO add date
-                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.indexSize, self.indexHTMLString)
-                self.request.sendall(bytearray(self.payload,'utf-8'))
-
-
+                #self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
+                self.path = "./www{}/index.html".format(self.url)
             else:
                 #Handle non index requests
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
-                self.file = "./www{}".format(self.url)
+                self.path = "./www{}".format(self.url)
                 print(str(self.file))
-                self.fileSize = os.path.getsize(self.file)
                 
-                with open(self.file, "r") as file:
-                    self.fileString = file.read()
-
-                self.payload = "HTTP/1.1 200 OK\r\nServer: Ryan's Server\r\nContent-type: text/css; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.fileSize, self.fileString)
-                self.request.sendall(bytearray(self.payload,'utf-8'))
-
+            try:
+                with open(self.path, "r") as file:
+                    self.body = file.read()
+                self.__handle200()
+                return
+            except FileNotFoundError:
+                #TODO add 301 correction check
+                self.__handle404()
+                return  
         else:
             #Send 405 cannont handle error
-            pass
+            self.__handle405()
+            return
 
-        #self.request.sendall(bytearray("OK",'utf-8'))
+
+    def __handle200(self):
+        self.fileSize = os.path.getsize(self.file) #TODO fix
+        #https://stackoverflow.com/a/541408
+        self.fileExt = os.path.splitext(self.file)[1][1:]
+        self.statusCode = "200 Ok"
+        self.__sendData()
+        return
+
+    def __handle301(self):
+        pass
+    
+
+    def __handle404(self):
+        self.statusCode = "404 Not Found"
+        self.fileExt = "html"
+        self.body = '''
+        
+        
+        '''
+        self.fileSize = len(self.body)
+        self.__sendData()
+        return
+
+    def __handle405(self):
+        self.statusCode = "405 Method Not Allowed"
+        self.fileExt = "html"
+        self.body = '''
+        
+        
+        '''
+        self.fileSize = len(self.body)
+        self.__sendData()
+        return
+
+    def __sendData(self):
+        self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileSize, self.fileExt, self.body)
+        self.request.sendall(bytearray(self.payload,'utf-8'))
+        return
+
+    
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
@@ -129,6 +155,46 @@ curl: (52) Empty reply from server
 
 student@cmput404:~/Assignments/CMPUT404-assignment-webserver$ python3 server.py
 Got a request of: b'GET / HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/7.61.0\r\nAccept: */*'
+
+
+'''
+
+'''
+404 trial run:
+
+
+student@cmput404:~$ curl -v http://0.0.0.0:8000/meme
+*   Trying 0.0.0.0...
+* TCP_NODELAY set
+* Connected to 0.0.0.0 (127.0.0.1) port 8000 (#0)
+> GET /meme HTTP/1.1
+> Host: 0.0.0.0:8000
+> User-Agent: curl/7.61.0
+> Accept: */*
+> 
+* HTTP 1.0, assume close after body
+< HTTP/1.0 404 File not found
+< Server: SimpleHTTP/0.6 Python/3.6.7
+< Date: Fri, 21 Jan 2022 01:00:04 GMT
+< Connection: close
+< Content-Type: text/html;charset=utf-8
+< Content-Length: 469
+< 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+        <title>Error response</title>
+    </head>
+    <body>
+        <h1>Error response</h1>
+        <p>Error code: 404</p>
+        <p>Message: File not found.</p>
+        <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
+    </body>
+</html>
+
 
 
 '''
