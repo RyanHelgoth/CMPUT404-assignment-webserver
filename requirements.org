@@ -20,7 +20,7 @@
    - [x] As a user I want to view files in ./www via a webbrowser
    - [x] As a user I want to view files in ./www via curl
    - [x] As a webserver admin I want to serve HTML and CSS files from ./www
-   - [] As a webserver admin I want ONLY files in ./www and deeper to be
+   - [x] As a webserver admin I want ONLY files in ./www and deeper to be
      served.
 
 ** Requirements

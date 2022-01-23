@@ -37,15 +37,21 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.requestParts = str(self.data).split()
         self.requestType = self.requestParts[0][2:] #Slicing cuts out "b'"
 
+        #TODO move based on profs response to question
         try:
             self.url = self.requestParts[1] 
         except IndexError:
             #Handle empty request
             print("Received empty request")
             return
+                
+           
+        self.__pickStatus()
+        return       
+       
 
-    
-        #TODO add check so that files are only served from ./www and deeper
+    def __pickStatus(self):
+       #TODO add check so that files are only served from ./www and deeper
         if (self.requestType == "GET"):
             if (self.url == "/"):
                 #Handle index requests
@@ -58,33 +64,45 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #Handle non index requests
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
                 self.path = "./www{}".format(self.url)
-                
-           
-            try:
-                with open(self.path, "r") as file: #Can raise FileNotFoundError or NotADirectoryError
-                    self.body = file.read() #Can raise IsADirectoryError
-                self.__handle200()
-                return
-            except (FileNotFoundError, NotADirectoryError) as exception:
-                self.__handle404()
-                return
-            except IsADirectoryError:
-                try:
-                    #TODO Also need to handle uneeded / at end of file request
-                    self.location301 = "http://127.0.0.1:8080" + self.path[5:] + "/" 
-                    self.path = "./www/{}/index.html".format(self.url) 
-                    open(self.path, "r")
-                    self.__handle301()
-                    return
-                except (FileNotFoundError, NotADirectoryError, NotADirectoryError) as exception:
-                    self.__handle404()
-                    return
-
-                 
+    
+            self.__handleGet()
+            return       
         else:
             #Send 405 cannont handle error
             self.__handle405()
             return
+
+
+    def __handleGet(self):
+        try:
+            with open(self.path, "r") as file: #Can raise FileNotFoundError or NotADirectoryError
+                self.body = file.read() #Can raise IsADirectoryError
+            self.__handle200()
+            return
+        except FileNotFoundError:
+            self.__handle404()
+            return
+        except NotADirectoryError:
+            try:
+                self.location301 = "http://127.0.0.1:8080" + self.path[5:-1] 
+                self.path = self.path[:-1] #Removes extra '/' from file path
+                open(self.path, "r")
+                self.__handle301()
+                return
+            except (FileNotFoundError, NotADirectoryError, NotADirectoryError) as exception:
+                self.__handle404()
+                return
+        except IsADirectoryError:
+            try:
+                self.location301 = "http://127.0.0.1:8080" + self.path[5:] + "/" 
+                self.path = "./www/{}/index.html".format(self.url) #Gets path of index for directory entered without ending '/'
+                open(self.path, "r")
+                self.__handle301()
+                return
+            except (FileNotFoundError, NotADirectoryError, NotADirectoryError) as exception:
+                self.__handle404()
+                return
+
 
 
     def __handle200(self):
