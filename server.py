@@ -59,22 +59,27 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
                 self.path = "./www{}".format(self.url)
                 
-                
+           
             try:
-                with open(self.path, "r") as file:
-                    self.body = file.read()
+                with open(self.path, "r") as file: #Can raise FileNotFoundError or NotADirectoryError
+                    self.body = file.read() #Can raise IsADirectoryError
                 self.__handle200()
                 return
-            except FileNotFoundError:
-                #301 correction check
+            except (FileNotFoundError, NotADirectoryError) as exception:
+                self.__handle404()
+                return
+            except IsADirectoryError:
                 try:
-                    self.path = self.path + "/" #Handles case of missing slash.
-                    open(self.path, "r") 
+                    #TODO Also need to handle uneeded / at end of file request
+                    self.location301 = "http://127.0.0.1:8080" + self.path[5:] + "/" 
+                    self.path = "./www/{}/index.html".format(self.url) 
+                    open(self.path, "r")
                     self.__handle301()
                     return
-                except FileNotFoundError: 
+                except (FileNotFoundError, NotADirectoryError, NotADirectoryError) as exception:
                     self.__handle404()
                     return
+
                  
         else:
             #Send 405 cannont handle error
@@ -104,9 +109,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 <h1>Error response</h1>
                 <p>Error code: 301</p>
                 <p>Message: Moved Permanently.</p>
-                <p>Error code explanation: HTTPStatus.MOVED_PERMANENTLY - The document you have requested has moved to <a href="{}">{}</a></p>
+                <p>Error code explanation: HTTPStatus.MOVED_PERMANENTLY - The document you have requested has moved to <a href="{0}">{0}</a></p>
             </body>
-        </html>'''.format(self.path)
+        </html>'''.format(self.location301)
         self.fileSize = len(self.body)
         self.__sendData()
         return
@@ -146,8 +151,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
             <body>
                 <h1>Error response</h1>
                 <p>Error code: 405</p>
-                <p>Message: Method Not Allowed ({}).</p>
-                <p>Error code explanation: HTTPStatus.METHOD_NOT_ALLOWED - You are not authorized to use the ({}) method.</p>
+                <p>Message: Method Not Allowed ({0}).</p>
+                <p>Error code explanation: HTTPStatus.METHOD_NOT_ALLOWED - You are not authorized to use the ({0}) method.</p>
             </body>
         </html>
         '''.format(self.requestType)
@@ -160,7 +165,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if ("405" in self.statusCode):
             self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         elif ("301" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.path, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
         else:
             self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         #print(self.payload)
