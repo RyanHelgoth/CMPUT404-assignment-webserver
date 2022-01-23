@@ -35,10 +35,17 @@ class MyWebServer(socketserver.BaseRequestHandler):
         print ("Got a request of: %s\n" % self.data)
 
         self.requestParts = str(self.data).split()
-        self.requestType = self.requestParts[0][2:] #Slicing cuts out "'b"
-        self.url = self.requestParts[1]
-    
+        self.requestType = self.requestParts[0][2:] #Slicing cuts out "b'"
 
+        try:
+            self.url = self.requestParts[1] 
+        except IndexError:
+            #Handle empty request
+            print("Received empty request")
+            return
+
+    
+        #TODO add check so that files are only served from ./www and deeper
         if (self.requestType == "GET"):
             if (self.url == "/"):
                 #Handle index requests
@@ -59,9 +66,17 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.__handle200()
                 return
             except FileNotFoundError:
-                #TODO add 301 correction check
-                self.__handle404()
-                return  
+                #301 correction check
+                try:
+                    self.path = self.path + "/" #Handles case of missing slash.
+                    with open(self.path, "r") as file:
+                        self.body = file.read()
+                    self.__handle301()
+                    return
+                except FileNotFoundError: 
+                    self.__handle404()
+                    return
+                 
         else:
             #Send 405 cannont handle error
             self.__handle405()
@@ -69,24 +84,52 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
 
     def __handle200(self):
-        self.fileSize = os.path.getsize(self.path) #TODO fix
-        #https://stackoverflow.com/a/541408
+        self.fileSize = os.path.getsize(self.path) #TODO fix, test with curl -v
+        #https://stackoverflow.com/a/541408 #TODO cite properly
         self.fileExt = os.path.splitext(self.path)[1][1:]
         self.statusCode = "200 Ok"
         self.__sendData()
         return
 
     def __handle301(self):
-        pass
+        self.statusCode = "301 Moved Permanently"
+        self.fileExt = "html"
+        self.body = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        "http://www.w3.org/TR/html4/strict.dtd">
+        <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+                <title>Error response</title>
+            </head>
+            <body>
+                <h1>Error response</h1>
+                <p>Error code: 404</p>
+                <p>Message: File not found.</p>
+                <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
+            </body>
+        </html>'''
+        self.fileSize = len(self.body)
+        self.__sendData()
+        return
     
 
     def __handle404(self):
         self.statusCode = "404 Not Found"
         self.fileExt = "html"
-        self.body = '''
-        
-        
-        '''
+        self.body = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        "http://www.w3.org/TR/html4/strict.dtd">
+        <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+                <title>Error response</title>
+            </head>
+            <body>
+                <h1>Error response</h1>
+                <p>Error code: 404</p>
+                <p>Message: File not found.</p>
+                <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
+            </body>
+        </html>'''
         self.fileSize = len(self.body)
         self.__sendData()
         return
@@ -94,16 +137,28 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def __handle405(self):
         self.statusCode = "405 Method Not Allowed"
         self.fileExt = "html"
-        self.body = '''
-        
-        
-        '''
+        self.body = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        "http://www.w3.org/TR/html4/strict.dtd">
+        <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+                <title>Error response</title>
+            </head>
+            <body>
+                <h1>Error response</h1>
+                <p>Error code: 405</p>
+                <p>Message: Method Not Allowed ({}).</p>
+                <p>Error code explanation: HTTPStatus.METHOD_NOT_ALLOWED - You are not authorized to use the ({}) method.</p>
+            </body>
+        </html>
+        '''.format(self.requestType)
         self.fileSize = len(self.body)
         self.__sendData()
         return
 
     def __sendData(self):
-        self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+        #TODO add date
+        self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
@@ -126,6 +181,8 @@ if __name__ == "__main__":
 
 
 # GET /pub/WWW/TheProject.html HTTP/1.1 (example GET)
+
+
 
 '''
 Incoming GET:
@@ -198,4 +255,81 @@ student@cmput404:~$ curl -v http://0.0.0.0:8000/meme
 
 
 
+'''
+
+
+'''
+Got a request of: b'GET /deep/deep.css HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0\r\nAccept: text/css,*/*;q=0.1\r\nAccept-Language: en-CA,en-US;q=0.7,en;q=0.3\r\nAccept-Encoding: gzip, deflate\r\nReferer: http://0.0.0.0:8080/deep/index.html\r\nConnection: keep-alive'
+
+Got a request of: b''
+
+----------------------------------------
+Exception happened during processing of request from ('127.0.0.1', 43464)
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/socketserver.py", line 317, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "/usr/lib/python3.6/socketserver.py", line 348, in process_request
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.6/socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib/python3.6/socketserver.py", line 721, in __init__
+    self.handle()
+  File "server.py", line 39, in handle
+    self.url = self.requestParts[1]
+IndexError: list index out of range
+----------------------------------------
+
+
+
+
+
+'''
+'''
+curl -X DELETE http://localhost:8000  
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+        <title>Error response</title>
+    </head>
+    <body>
+        <h1>Error response</h1>
+        <p>Error code: 501</p>
+        <p>Message: Unsupported method ('DELETE').</p>
+        <p>Error code explanation: HTTPStatus.NOT_IMPLEMENTED - Server does not support this operation.</p>
+    </body>
+</html>
+'''
+
+'''
+301 example
+
+ curl -v http://google.com 
+* Rebuilt URL to: http://google.com/
+*   Trying 142.250.217.78...
+* TCP_NODELAY set
+* Connected to google.com (142.250.217.78) port 80 (#0)
+> GET / HTTP/1.1
+> Host: google.com
+> User-Agent: curl/7.61.0
+> Accept: */*
+> 
+< HTTP/1.1 301 Moved Permanently
+< Location: http://www.google.com/
+< Content-Type: text/html; charset=UTF-8
+< Date: Sun, 23 Jan 2022 01:12:42 GMT
+< Expires: Tue, 22 Feb 2022 01:12:42 GMT
+< Cache-Control: public, max-age=2592000
+< Server: gws
+< Content-Length: 219
+< X-XSS-Protection: 0
+< X-Frame-Options: SAMEORIGIN
+< 
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="http://www.google.com/">here</A>.
+</BODY></HTML>
 '''
