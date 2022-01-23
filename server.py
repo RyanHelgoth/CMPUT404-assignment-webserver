@@ -69,8 +69,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #301 correction check
                 try:
                     self.path = self.path + "/" #Handles case of missing slash.
-                    with open(self.path, "r") as file:
-                        self.body = file.read()
+                    open(self.path, "r") 
                     self.__handle301()
                     return
                 except FileNotFoundError: 
@@ -103,11 +102,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
             </head>
             <body>
                 <h1>Error response</h1>
-                <p>Error code: 404</p>
-                <p>Message: File not found.</p>
-                <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
+                <p>Error code: 301</p>
+                <p>Message: Moved Permanently.</p>
+                <p>Error code explanation: HTTPStatus.MOVED_PERMANENTLY - The document you have requested has moved to <a href="{}">{}</a></p>
             </body>
-        </html>'''
+        </html>'''.format(self.path)
         self.fileSize = len(self.body)
         self.__sendData()
         return
@@ -158,7 +157,12 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def __sendData(self):
         #TODO add date
-        self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+        if ("405" in self.statusCode):
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+        elif ("301" in self.statusCode):
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.path, self.body)
+        else:
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
