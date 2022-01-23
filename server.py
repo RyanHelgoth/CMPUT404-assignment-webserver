@@ -2,6 +2,7 @@
 import socketserver
 import os
 
+
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +32,8 @@ import os
 class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
-        self.data = self.request.recv(1024).strip()
+        #TODO find way to replace dot segments in url
+        self.data = self.request.recv(1024).strip() #TODO check if i need encoding
         print ("Got a request of: %s\n" % self.data)
 
         self.requestParts = str(self.data).split()
@@ -53,17 +55,19 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def __pickStatus(self):
        #TODO add check so that files are only served from ./www and deeper
         if (self.requestType == "GET"):
+            self.url = os.path.normpath(self.url)
             if (self.url == "/"):
-                #Handle index requests
+                #Handle root directory requests
                 #self.file = "www{}index.html".format(self.url)
                 self.path = os.path.join("www", "index.html")
-            elif (self.url[-1] == "/"):
+            elif (self.url[-1] == "/" and not "." in self.url):
                 #self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
+                #Handles directory requests and file requests with extra "/"
                 self.path = "./www{}/index.html".format(self.url)
             else:
-                #Handle non index requests
+                #Handles file requests and directory requests with missing "/"
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
-                self.path = "./www{}".format(self.url)
+                self.path = "./www{}".format(self.url) 
     
             self.__handleGet()
             return       
@@ -181,11 +185,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def __sendData(self):
         #TODO add date
         if ("405" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         elif ("301" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
         else:
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}\r\n".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
