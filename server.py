@@ -1,7 +1,8 @@
 #  coding: utf-8 
 import socketserver
 import os
-import urllib
+import pathlib 
+from pathlib import Path
 
 
 
@@ -41,11 +42,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.requestParts = str(self.data).split()
         self.requestType = self.requestParts[0][2:] #Slicing cuts out "b'"
 
+
         #TODO move based on profs response to question
         try:
             self.url = self.requestParts[1] 
-            #https://mazinahmed.net/blog/testing-for-path-traversal-with-python/
-            self.url = urllib.request.urlopen(self.url)
         except IndexError:
             #Handle empty request
             print("Received empty request")
@@ -58,7 +58,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def __pickStatus(self):
         if (self.requestType == "GET"):
-            self.url = os.path.normpath(self.url)
             if (self.url == "/"):
                 #Handle root directory requests
                 #self.file = "www{}index.html".format(self.url)
@@ -72,6 +71,22 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
                 self.path = "./www{}".format(self.url) 
     
+            
+            
+           
+             
+            self.path = os.path.abspath(self.path) #Returns absolute path without dot segments
+            self.path = os.path.relpath(self.path) #Gets relative path
+            if (self.url[-1] == "/" and not self.url == "/"):
+                #os.path methods remove trailing "/", so it must be readded to trigger 301
+                self.path = self.path + "/"
+
+            if (not self.path[:3] == "www"):
+                #If path does not start with "www", then it is not in a directory that should be served from
+                self.__handle404()
+                return
+            print(self.path) #./www/../../../../../../../../../../../../etc/group
+
             self.__handleGet()
             return       
         else:
@@ -91,7 +106,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             return
         except NotADirectoryError:
             try:
-                self.location301 = "http://127.0.0.1:8080" + self.path[5:-1] 
+                self.location301 = "http://127.0.0.1:8080/{}".format(self.path[4:-1])# TODO changes might make this uneeded
                 self.path = self.path[:-1] #Removes extra '/' from file path
                 open(self.path, "r")
                 self.__handle301()
@@ -101,8 +116,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 return
         except IsADirectoryError:
             try:
-                self.location301 = "http://127.0.0.1:8080" + self.path[5:] + "/" 
-                self.path = "./www/{}/index.html".format(self.url) #Gets path of index for directory entered without ending '/'
+                self.location301 = "http://127.0.0.1:8080/{}/".format(self.path[4:])
+                self.path = "{}/index.html".format(self.path) #Gets path of index for directory entered without ending '/'
+                print(self.path)
                 open(self.path, "r")
                 self.__handle301()
                 return
@@ -187,11 +203,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def __sendData(self):
         if ("405" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: keep-alive\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: close\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         elif ("301" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: keep-alive\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: close\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
         else:
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: keep-alive\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: close\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
