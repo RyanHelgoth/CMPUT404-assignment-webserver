@@ -1,6 +1,8 @@
 #  coding: utf-8 
 import socketserver
 import os
+import urllib
+
 
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
@@ -33,7 +35,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
         #TODO find way to replace dot segments in url
-        self.data = self.request.recv(1024).strip() #TODO check if i need encoding
+        self.data = self.request.recv(1024).strip() 
         print ("Got a request of: %s\n" % self.data)
 
         self.requestParts = str(self.data).split()
@@ -42,6 +44,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
         #TODO move based on profs response to question
         try:
             self.url = self.requestParts[1] 
+            #https://mazinahmed.net/blog/testing-for-path-traversal-with-python/
+            self.url = urllib.request.urlopen(self.url)
         except IndexError:
             #Handle empty request
             print("Received empty request")
@@ -53,7 +57,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
        
 
     def __pickStatus(self):
-       #TODO add check so that files are only served from ./www and deeper
         if (self.requestType == "GET"):
             self.url = os.path.normpath(self.url)
             if (self.url == "/"):
@@ -110,7 +113,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
 
     def __handle200(self):
-        self.fileSize = os.path.getsize(self.path) #TODO fix, test with curl -v
+        self.fileSize = os.path.getsize(self.path) 
         #https://stackoverflow.com/a/541408 #TODO cite properly
         self.fileExt = os.path.splitext(self.path)[1][1:]
         self.statusCode = "200 Ok"
@@ -183,13 +186,12 @@ class MyWebServer(socketserver.BaseRequestHandler):
         return
 
     def __sendData(self):
-        #TODO add date
         if ("405" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: keep-alive\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nAllow: GET\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         elif ("301" in self.statusCode):
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: keep-alive\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
         else:
-            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
+            self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: keep-alive\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
         #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
@@ -205,10 +207,9 @@ if __name__ == "__main__":
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
-    server.serve_forever()
     print("Sever started")
-
-    server.handle()
+    server.serve_forever()
+    
 
 
 # GET /pub/WWW/TheProject.html HTTP/1.1 (example GET)

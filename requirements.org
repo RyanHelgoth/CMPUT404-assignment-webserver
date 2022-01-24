@@ -25,12 +25,12 @@
 
 ** Requirements
    - [x] The webserver can serve files from ./www
-   - [ ] The webserver can be run using the runner.sh file
-   - [ ] The webserver can pass all the tests in freetests.py
+   - [x] The webserver can be run using the runner.sh file
+   - [x] The webserver can pass all the tests in freetests.py
    - [ ] The webserver can pass all the tests in not-free-tests.py
      (you only have part of this one, I reserve the right to add tests)
-   - [ ] The webserver supports mime-types for HTML
-   - [ ] The webserver supports mime-types for CSS
+   - [x] The webserver supports mime-types for HTML
+   - [x] The webserver supports mime-types for CSS
    - [x] The webserver can return index.html from directories (paths
      that end in /)
    - [x] The webserver can server 404 errors for paths not found
