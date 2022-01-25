@@ -65,7 +65,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             elif (self.url[-1] == "/" and not "." in self.url):
                 #self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
                 #Handles directory requests and file requests with extra "/"
-                self.path = "./www{}/index.html".format(self.url)
+                self.path = "./www{}index.html".format(self.url)
             else:
                 #Handles file requests and directory requests with missing "/"
                 #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
@@ -77,15 +77,19 @@ class MyWebServer(socketserver.BaseRequestHandler):
              
             self.path = os.path.abspath(self.path) #Returns absolute path without dot segments
             self.path = os.path.relpath(self.path) #Gets relative path
-            if (self.url[-1] == "/" and not self.url == "/"):
+            if (self.url[-1] == "/" and "." in self.url):
                 #os.path methods remove trailing "/", so it must be readded to trigger 301
                 self.path = self.path + "/"
+
+            
 
             if (not self.path[:3] == "www"):
                 #If path does not start with "www", then it is not in a directory that should be served from
                 self.__handle404()
                 return
-            print(self.path) #./www/../../../../../../../../../../../../etc/group
+            
+            print(self.path) #./www/deep/index.html
+
 
             self.__handleGet()
             return       
@@ -106,6 +110,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             return
         except NotADirectoryError:
             try:
+                print("not dir error")
                 self.location301 = "http://127.0.0.1:8080/{}".format(self.path[4:-1])# TODO changes might make this uneeded
                 self.path = self.path[:-1] #Removes extra '/' from file path
                 open(self.path, "r")
@@ -116,6 +121,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 return
         except IsADirectoryError:
             try:
+                print("is dir error")
                 self.location301 = "http://127.0.0.1:8080/{}/".format(self.path[4:])
                 self.path = "{}/index.html".format(self.path) #Gets path of index for directory entered without ending '/'
                 print(self.path)
@@ -228,156 +234,3 @@ if __name__ == "__main__":
     
 
 
-# GET /pub/WWW/TheProject.html HTTP/1.1 (example GET)
-
-
-
-'''
-Incoming GET:
-> GET / HTTP/1.1
-> Host: 0.0.0.0:8000
-> User-Agent: curl/7.61.0
-> Accept: */*
-> 
-
-Response to GET:
-< HTTP/1.0 200 OK
-< Server: SimpleHTTP/0.6 Python/3.6.7
-< Date: Thu, 20 Jan 2022 19:57:31 GMT
-< Content-type: text/html; charset=utf-8
-< Content-Length: 2125
-< 
-*BODY* (serve "/" aka "./www" files)
-
-
-
-
-'''
-
-'''
-Trial run:
-student@cmput404:~$ curl http://0.0.0.0:8080/
-curl: (52) Empty reply from server
-
-student@cmput404:~/Assignments/CMPUT404-assignment-webserver$ python3 server.py
-Got a request of: b'GET / HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: curl/7.61.0\r\nAccept: */*'
-
-
-'''
-
-'''
-404 trial run:
-
-
-student@cmput404:~$ curl -v http://0.0.0.0:8000/meme
-*   Trying 0.0.0.0...
-* TCP_NODELAY set
-* Connected to 0.0.0.0 (127.0.0.1) port 8000 (#0)
-> GET /meme HTTP/1.1
-> Host: 0.0.0.0:8000
-> User-Agent: curl/7.61.0
-> Accept: */*
-> 
-* HTTP 1.0, assume close after body
-< HTTP/1.0 404 File not found
-< Server: SimpleHTTP/0.6 Python/3.6.7
-< Date: Fri, 21 Jan 2022 01:00:04 GMT
-< Connection: close
-< Content-Type: text/html;charset=utf-8
-< Content-Length: 469
-< 
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-        "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-        <title>Error response</title>
-    </head>
-    <body>
-        <h1>Error response</h1>
-        <p>Error code: 404</p>
-        <p>Message: File not found.</p>
-        <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
-    </body>
-</html>
-
-
-
-'''
-
-
-'''
-Got a request of: b'GET /deep/deep.css HTTP/1.1\r\nHost: 0.0.0.0:8080\r\nUser-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0\r\nAccept: text/css,*/*;q=0.1\r\nAccept-Language: en-CA,en-US;q=0.7,en;q=0.3\r\nAccept-Encoding: gzip, deflate\r\nReferer: http://0.0.0.0:8080/deep/index.html\r\nConnection: keep-alive'
-
-Got a request of: b''
-
-----------------------------------------
-Exception happened during processing of request from ('127.0.0.1', 43464)
-Traceback (most recent call last):
-  File "/usr/lib/python3.6/socketserver.py", line 317, in _handle_request_noblock
-    self.process_request(request, client_address)
-  File "/usr/lib/python3.6/socketserver.py", line 348, in process_request
-    self.finish_request(request, client_address)
-  File "/usr/lib/python3.6/socketserver.py", line 361, in finish_request
-    self.RequestHandlerClass(request, client_address, self)
-  File "/usr/lib/python3.6/socketserver.py", line 721, in __init__
-    self.handle()
-  File "server.py", line 39, in handle
-    self.url = self.requestParts[1]
-IndexError: list index out of range
-----------------------------------------
-
-
-
-
-
-'''
-'''
-curl -X DELETE http://localhost:8000  
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
-        "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-        <title>Error response</title>
-    </head>
-    <body>
-        <h1>Error response</h1>
-        <p>Error code: 501</p>
-        <p>Message: Unsupported method ('DELETE').</p>
-        <p>Error code explanation: HTTPStatus.NOT_IMPLEMENTED - Server does not support this operation.</p>
-    </body>
-</html>
-'''
-
-'''
-301 example
-
- curl -v http://google.com 
-* Rebuilt URL to: http://google.com/
-*   Trying 142.250.217.78...
-* TCP_NODELAY set
-* Connected to google.com (142.250.217.78) port 80 (#0)
-> GET / HTTP/1.1
-> Host: google.com
-> User-Agent: curl/7.61.0
-> Accept: */*
-> 
-< HTTP/1.1 301 Moved Permanently
-< Location: http://www.google.com/
-< Content-Type: text/html; charset=UTF-8
-< Date: Sun, 23 Jan 2022 01:12:42 GMT
-< Expires: Tue, 22 Feb 2022 01:12:42 GMT
-< Cache-Control: public, max-age=2592000
-< Server: gws
-< Content-Length: 219
-< X-XSS-Protection: 0
-< X-Frame-Options: SAMEORIGIN
-< 
-<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
-<TITLE>301 Moved</TITLE></HEAD><BODY>
-<H1>301 Moved</H1>
-The document has moved
-<A HREF="http://www.google.com/">here</A>.
-</BODY></HTML>
-'''
