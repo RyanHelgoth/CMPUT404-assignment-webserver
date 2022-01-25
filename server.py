@@ -48,36 +48,37 @@ class MyWebServer(socketserver.BaseRequestHandler):
        
 
     def __pickStatus(self):
+
+        #NOTE: Paths will not work on all OS's. Linux is the only OS that has been tested.
         if (self.requestType == "GET"):
-            if (self.url == "/"):
-                #Handle root directory requests
-                #self.file = "www{}index.html".format(self.url)
-                self.path = os.path.join("www", "index.html")
-            elif (self.url[-1] == "/" and not "." in self.url):
-                #Handles directory requests and file requests with extra "/"
-                #self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
-                self.path = "./www{}index.html".format(self.url)
-            else:
-                #Handles file requests and directory requests with missing "/"
-                #self.file = os.path.join(os.getcwd(), "www", self.url) #TODO make self.file cross platform
-                self.path = "./www{}".format(self.url) 
-    
+            if (self.url[0] == "/"):
+                if (self.url == "/"):
+                    #Handle root directory requests
+                    self.path = "./www/index.html"
+                elif (self.url[-1] == "/" and not "." in self.url):
+                    #Handles directory requests and file requests with extra "/"
+                    self.path = "./www{}index.html".format(self.url)
+                else:
+                    #Handles file requests and directory requests with missing "/"
+                    self.path = "./www{}".format(self.url) 
+        
+                self.path = os.path.abspath(self.path) #Returns absolute path without dot segments
+                self.path = os.path.relpath(self.path) #Gets relative path
             
-            self.path = os.path.abspath(self.path) #Returns absolute path without dot segments
-            self.path = os.path.relpath(self.path) #Gets relative path
-            
-            
-            if (self.url[-1] == "/" and not self.url == "/"):
-                #os.path methods remove trailing "/", so it must be readded to trigger 301 
-                self.path = self.path + "/"
+                if (self.url[-1] == "/" and "." in self.url):
+                    #os.path methods remove trailing "/", so it must be readded to trigger 301 
+                    self.path = self.path + "/"
+                
+                if (not self.path[:3] == "www"):
+                    #If path does not start with "www", then it is not in a directory that should be served from
+                    self.__handle404()
+                    return
 
-            if (not self.path[:3] == "www"):
-                #If path does not start with "www", then it is not in a directory that should be served from
-                self.__handle404()
+                self.__handleGet()
                 return
-
-            self.__handleGet()
-            return       
+            else:
+                self.__handle404()
+                return       
         
         else:
             #Send 405 cannont handle error
