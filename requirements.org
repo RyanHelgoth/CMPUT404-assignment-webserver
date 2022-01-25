@@ -27,7 +27,7 @@
    - [x] The webserver can serve files from ./www
    - [x] The webserver can be run using the runner.sh file
    - [x] The webserver can pass all the tests in freetests.py
-   - [ ] The webserver can pass all the tests in not-free-tests.py
+   - [x] The webserver can pass all the tests in not-free-tests.py
      (you only have part of this one, I reserve the right to add tests)
    - [x] The webserver supports mime-types for HTML
    - [x] The webserver supports mime-types for CSS
@@ -47,7 +47,7 @@
 ** Restrictions
    - [x] Use Python3
    - [x] Must run in the 404 VM (Ubuntu 18.10)
-   - [ ] License your webserver properly (use an OSI approved license)
+   - [x] License your webserver properly (use an OSI approved license)
      - Put your name or some identifier (not your student number) on it!
    - [x] You cannot use a Web Server library
    - [x] Screenshots must be named deep.png and root.png in the root of the repository

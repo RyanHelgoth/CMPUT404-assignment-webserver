@@ -1,12 +1,9 @@
 #  coding: utf-8 
 import socketserver
 import os
-import pathlib 
-from pathlib import Path
 
 
-
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Ryan Helgoth
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,27 +28,21 @@ from pathlib import Path
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-# https://docs.python.org/3/library/socketserver.html 
 class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
-        #TODO find way to replace dot segments in url
         self.data = self.request.recv(1024).strip() 
         print ("Got a request of: %s\n" % self.data)
 
         self.requestParts = str(self.data).split()
         self.requestType = self.requestParts[0][2:] #Slicing cuts out "b'"
 
-
-        #TODO move based on profs response to question
+        #Ingores empty requests that firefox sometimes sends. I could not find the cause of this.
         try:
             self.url = self.requestParts[1] 
         except IndexError:
-            #Handle empty request
-            print("Received empty request")
             return
-                
-           
+                  
         self.__pickStatus()
         return       
        
@@ -63,8 +54,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #self.file = "www{}index.html".format(self.url)
                 self.path = os.path.join("www", "index.html")
             elif (self.url[-1] == "/" and not "." in self.url):
-                #self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
                 #Handles directory requests and file requests with extra "/"
+                #self.file = os.path.join("www", self.url, "index.html") #TODO make self.file cross platform
                 self.path = "./www{}index.html".format(self.url)
             else:
                 #Handles file requests and directory requests with missing "/"
@@ -72,27 +63,22 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.path = "./www{}".format(self.url) 
     
             
-            
-           
-             
             self.path = os.path.abspath(self.path) #Returns absolute path without dot segments
             self.path = os.path.relpath(self.path) #Gets relative path
-            if (self.url[-1] == "/" and "." in self.url):
-                #os.path methods remove trailing "/", so it must be readded to trigger 301
-                self.path = self.path + "/"
-
             
+            
+            if (self.url[-1] == "/" and not self.url == "/"):
+                #os.path methods remove trailing "/", so it must be readded to trigger 301 
+                self.path = self.path + "/"
 
             if (not self.path[:3] == "www"):
                 #If path does not start with "www", then it is not in a directory that should be served from
                 self.__handle404()
                 return
-            
-            print(self.path) #./www/deep/index.html
-
 
             self.__handleGet()
             return       
+        
         else:
             #Send 405 cannont handle error
             self.__handle405()
@@ -110,10 +96,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
             return
         except NotADirectoryError:
             try:
-                print("not dir error")
-                self.location301 = "http://127.0.0.1:8080/{}".format(self.path[4:-1])# TODO changes might make this uneeded
+                self.location301 = "http://127.0.0.1:8080/{}".format(self.path[4:-1])
                 self.path = self.path[:-1] #Removes extra '/' from file path
-                open(self.path, "r")
+                open(self.path, "r") #Test if path is valid after changes
                 self.__handle301()
                 return
             except (FileNotFoundError, NotADirectoryError, NotADirectoryError) as exception:
@@ -121,22 +106,27 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 return
         except IsADirectoryError:
             try:
-                print("is dir error")
                 self.location301 = "http://127.0.0.1:8080/{}/".format(self.path[4:])
                 self.path = "{}/index.html".format(self.path) #Gets path of index for directory entered without ending '/'
                 print(self.path)
-                open(self.path, "r")
+                open(self.path, "r") #Test if path is valid after changes
                 self.__handle301()
                 return
             except (FileNotFoundError, NotADirectoryError, NotADirectoryError) as exception:
                 self.__handle404()
                 return
 
-
-
     def __handle200(self):
         self.fileSize = os.path.getsize(self.path) 
-        #https://stackoverflow.com/a/541408 #TODO cite properly
+        ''' 
+        Link: https://stackoverflow.com/a/541408
+        Author: Brian Neal
+        Date: Feb 12 '09 at 14:15
+        License: SA 2.5
+
+        I used this post to help extract the file extension
+        from a path.
+        '''
         self.fileExt = os.path.splitext(self.path)[1][1:]
         self.statusCode = "200 Ok"
         self.__sendData()
@@ -214,7 +204,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: close\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\nLocation: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.location301, self.body)
         else:
             self.payload = "HTTP/1.1 {}\r\nServer: Ryan's Server/1.0 Python/3.6.7\r\nConnection: close\r\nContent-type: text/{}; charset=utf-8\r\nContent-Length: {}\r\n\r\n{}".format(self.statusCode, self.fileExt, self.fileSize, self.body)
-        #print(self.payload)
         self.request.sendall(bytearray(self.payload,'utf-8'))
         return
 
